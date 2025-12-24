@@ -48,9 +48,8 @@ class RoomController extends Controller
 
     public function show(Room $room)
     {
-        // Garantir que o utilizador pertence à sala
         abort_unless(
-            $room->users->contains(Auth::id()),
+            $room->users->contains(auth()->id()),
             403
         );
 

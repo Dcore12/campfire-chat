@@ -1,15 +1,15 @@
 <x-app-layout>
-    <div class="flex h-screen overflow-hidden">
+    <div class="flex h-screen bg-gray-100">
 
-        {{-- Sidebar --}}
-        <div class="w-64 border-r bg-gray-100">
+        {{-- SIDEBAR --}}
+        <aside class="w-72 bg-white border-r flex flex-col">
             @include('chat.sidebar')
-        </div>
+        </aside>
 
-        {{-- Conteúdo do Chat --}}
-        <div class="flex-1 flex flex-col">
+        {{-- CONTEÚDO PRINCIPAL --}}
+        <main class="flex-1 flex flex-col">
             @yield('content')
-        </div>
+        </main>
 
     </div>
 </x-app-layout>

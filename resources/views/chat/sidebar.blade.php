@@ -1,40 +1,58 @@
-<div class="p-4 space-y-6 text-sm">
+<div class="h-full flex flex-col">
 
-    {{-- Utilizador --}}
-    <div class="font-semibold">
-        {{ auth()->user()->name }}
+    {{-- UTILIZADOR --}}
+    <div class="px-4 py-4 border-b">
+        <div class="font-semibold">{{ auth()->user()->name }}</div>
+        <div class="text-xs text-gray-500">
+            {{ auth()->user()->role === 'admin' ? 'Admin' : 'User' }}
+        </div>
     </div>
 
-    {{-- Salas --}}
-    <div>
-        <h4 class="text-xs uppercase text-gray-500 mb-2">Salas</h4>
+    {{-- SALAS --}}
+    <div class="px-4 py-3">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-gray-500 uppercase">Salas</span>
 
-        <ul class="space-y-1">
+            @if(auth()->user()->isAdmin())
+                <a href="{{ route('rooms.create') }}"
+                   class="text-xs text-blue-600 hover:underline">
+                    + Nova
+                </a>
+            @endif
+        </div>
+
+        <div class="space-y-1">
             @foreach(auth()->user()->rooms as $room)
-                <li>
-                    <a href="{{ route('rooms.show', $room) }}"
-                       class="block px-2 py-1 rounded hover:bg-gray-200">
-                        # {{ $room->name }}
-                    </a>
-                </li>
+                <a href="{{ route('rooms.show', $room) }}"
+                   class="block px-2 py-1 rounded text-sm hover:bg-gray-100
+                   {{ request()->routeIs('rooms.show') && request()->route('room')?->id === $room->id ? 'bg-gray-200 font-semibold' : '' }}">
+                    # {{ $room->name }}
+                </a>
             @endforeach
-        </ul>
+        </div>
     </div>
 
-    {{-- Mensagens diretas --}}
-    <div>
-        <h4 class="text-xs uppercase text-gray-500 mb-2">Mensagens Diretas</h4>
+    {{-- MENSAGENS DIRETAS --}}
+    <div class="px-4 py-3 border-t mt-auto">
+        <span class="text-xs font-semibold text-gray-500 uppercase block mb-2">
+            Mensagens diretas
+        </span>
 
-        <ul class="space-y-1">
+        <div class="space-y-1">
             @foreach(\App\Models\User::where('id', '!=', auth()->id())->get() as $user)
-                <li>
-                    <a href="{{ route('messages.direct.show', $user) }}"
-                       class="block px-2 py-1 rounded hover:bg-gray-200">
-                        {{ $user->name }}
-                    </a>
-                </li>
+                <a href="{{ route('messages.direct.show', $user) }}"
+                class="flex items-center gap-2 px-2 py-1 rounded text-sm hover:bg-gray-100">
+
+                    {{-- Estado --}}
+                    <span class="w-2 h-2 rounded-full
+                        {{ $user->status === 'online' ? 'bg-green-500' : 'bg-gray-400' }}">
+                    </span>
+
+                    {{-- Nome --}}
+                    <span>{{ $user->name }}</span>
+                </a>
             @endforeach
-        </ul>
+        </div>
     </div>
 
 </div>
