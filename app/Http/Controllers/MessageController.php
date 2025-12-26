@@ -16,20 +16,22 @@ class MessageController extends Controller
             'content' => 'required|string|max:2000',
         ]);
 
-        // Garantir que o utilizador pertence à sala
-        if (! $room->users->contains(Auth::id())) {
+        if (! $room->users->contains(auth()->id())) {
             abort(403);
         }
 
         $message = Message::create([
-            'user_id'          => Auth::id(),
+            'user_id'          => auth()->id(),
             'content'          => $request->content,
             'messageable_id'   => $room->id,
             'messageable_type' => Room::class,
         ]);
 
-        event(new MessageSent($message));
-        
-        return redirect()->route('rooms.show', $room);
+        broadcast(new MessageSent($message))->toOthers();
+        //\Log::info('🚀 MessageSent dispatched', ['room' => $room->id]);
+
+        // ✅ MUITO IMPORTANTE
+        return response()->json($message->load('user'));
     }
+
 }

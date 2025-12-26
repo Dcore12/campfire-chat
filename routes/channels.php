@@ -2,16 +2,20 @@
 
 use Illuminate\Support\Facades\Broadcast;
 use App\Models\Conversation;
+use App\Models\Room;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-/**
- * Channel privado para DMs
- */
-Broadcast::channel('dm.{conversationId}', function ($user, $conversationId) {
-    return Conversation::where('id', $conversationId)
-        ->whereHas('users', fn ($q) => $q->where('users.id', $user->id))
+Broadcast::channel('room.{roomId}', function ($user, $roomId) {
+    return Room::where('id', $roomId)
+        ->whereHas('users', function ($q) use ($user) {
+            $q->where('users.id', $user->id);
+        })
         ->exists();
+});
+
+Broadcast::channel('dm.{conversationId}', function ($user, $conversationId) {
+    return true;
 });

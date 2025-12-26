@@ -28,16 +28,47 @@
         @endforelse
     </div>
 
+    {{-- INDICADOR --}}
+    <div id="typing-indicator"
+         class="text-xs text-gray-400 px-6 pb-2 hidden italic">
+    </div>
+
     {{-- Input --}}
-    <form method="POST"
-          class="border-t bg-white px-6 py-4">
+    <form method="POST" class="border-t bg-white px-6 py-4">
         @csrf
-        <input type="text"
-               name="content"
-               placeholder="Escrever mensagem…"
-               class="w-full border rounded px-4 py-2 text-sm"
-               required>
+        <input
+            id="message-input"
+            type="text"
+            name="content"
+            placeholder="Escrever mensagem…"
+            class="w-full border rounded px-4 py-2 text-sm"
+            required
+        >
     </form>
 
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    const conversationId = {{ $conversation->id }};
+    const currentUserId = {{ auth()->id() }};
+    const currentUserName = @json(auth()->user()->name);
+
+    listenTyping(conversationId, currentUserId);
+
+    const input = document.getElementById('message-input');
+    let lastSent = 0;
+
+    input.addEventListener('input', () => {
+        const now = Date.now();
+        if (now - lastSent < 600) return;
+        lastSent = now;
+
+        Echo.private(`dm.${conversationId}`).whisper('typing', {
+            user_id: currentUserId,
+            name: currentUserName
+        });
+    });
+</script>
+@endpush

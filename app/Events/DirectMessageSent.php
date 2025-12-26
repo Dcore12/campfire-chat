@@ -7,24 +7,24 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Broadcasting\InteractsWithSockets;
 
 class DirectMessageSent implements ShouldBroadcast
 {
-    use Dispatchable, SerializesModels;
+    use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(
-        public Message $message
-    ) {}
-
-    public function broadcastOn(): PrivateChannel
+    public function __construct(public Message $message)
     {
-        return new PrivateChannel(
-            'dm.' . $this->message->messageable_id
-        );
+        $this->message->load('user');
     }
 
-    public function broadcastAs(): string
+    public function broadcastOn()
     {
-        return 'dm.sent';
+        return new PrivateChannel('dm.' . $this->message->messageable_id);
+    }
+
+    public function broadcastAs()
+    {
+        return 'dm.message.sent';
     }
 }

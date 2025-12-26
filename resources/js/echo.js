@@ -1,6 +1,6 @@
 import Echo from "laravel-echo";
-
 import Pusher from "pusher-js";
+
 window.Pusher = Pusher;
 
 window.Echo = new Echo({
@@ -13,21 +13,21 @@ window.Echo = new Echo({
     enabledTransports: ["ws", "wss"],
 });
 
-export function listenTyping(conversationId, currentUserId) {
-    let typingTimeout = null;
+window.listenRoomTyping = function (roomId, currentUserId) {
+    let hideTimer = null;
 
-    Echo.private(`dm.${conversationId}`).listen(".user.typing", (e) => {
+    window.Echo.private(`room.${roomId}`).listenForWhisper("typing", (e) => {
         if (e.user_id === currentUserId) return;
 
         const indicator = document.getElementById("typing-indicator");
         if (!indicator) return;
 
-        indicator.textContent = `${e.name} está a escrever…`;
+        indicator.textContent = `✍️ ${e.name} está a escrever…`;
         indicator.classList.remove("hidden");
 
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
             indicator.classList.add("hidden");
         }, 2000);
     });
-}
+};

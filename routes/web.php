@@ -7,6 +7,7 @@ use App\Http\Controllers\DirectMessageController;
 use App\Events\UserTyping;
 use Illuminate\Http\Request;
 
+
 Route::get('/', function () {
     return view('welcome');
 });

@@ -111,7 +111,9 @@
 
 
     {{-- MENSAGENS --}}
-    <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-gray-50">
+    <div id="messages"
+        class="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-gray-50">
+
 
         @forelse($room->messages->reverse() as $message)
             <div>
@@ -139,59 +141,107 @@
     {{-- INDICADOR "A ESCREVER" --}}
     <div
         id="typing-indicator"
-        class="text-xs text-gray-400 px-6 pb-2 hidden">
+        class="text-xs text-red-400 px-6 pb-2 hidden italic transition-opacity duration-200">
     </div>
 
 
     {{-- INPUT --}}
-    <form method="POST"
-          action="{{ route('rooms.messages.store', $room) }}"
-          class="border-t bg-white px-6 py-4">
+    <form
+        id="message-form"
+        method="POST"
+        action="{{ route('rooms.messages.store', $room) }}"
+    >
         @csrf
-
         <input
             id="message-input"
             type="text"
-            name="content"
             placeholder="Escrever mensagem…"
-            class="w-full border rounded px-4 py-2 text-sm focus:outline-none focus:ring"
+            class="w-full border rounded px-4 py-2 text-sm"
             required
             autofocus
         />
     </form>
-
 </div>
 @endsection
 
 @push('scripts')
 <script>
-    const conversationId = {{ $room->id }};
+document.addEventListener('DOMContentLoaded', () => {
+
+    // =============================
+    // 1️⃣ VARIÁVEIS GLOBAIS DA SALA
+    // =============================
+    const roomId = {{ $room->id }};
     const currentUserId = {{ auth()->id() }};
+    const currentUserName = @json(auth()->user()->name);
 
-    // ouvir typing via Echo
-    window.listenTyping(conversationId, currentUserId);
-
+    const messages = document.getElementById('messages');
+    const form = document.getElementById('message-form');
     const input = document.getElementById('message-input');
-    let typingTimer = null;
 
-    input.addEventListener('input', () => {
-        clearTimeout(typingTimer);
+    // =============================
+    // 2️⃣ FUNÇÃO ÚNICA PARA ADICIONAR MENSAGENS AO DOM
+    // =============================
+    function appendMessage(message) {
+        const wrapper = document.createElement('div');
 
-        fetch('/typing', {
+        wrapper.innerHTML = `
+            <div class="text-sm">
+                <span class="font-semibold">${message.user.name}</span>
+                <span class="text-xs text-gray-400 ml-2">
+                    ${new Date(message.created_at).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}
+                </span>
+            </div>
+            <div class="text-sm text-gray-800">
+                ${message.content}
+            </div>
+        `;
+
+        messages.appendChild(wrapper);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    // =============================
+    // 3️⃣ RECEBER MENSAGENS EM REALTIME (OUTROS USERS)
+    // =============================
+    window.Echo
+        .private(`room.${roomId}`)
+        .listen('.room.message.sent', (e) => {
+            appendMessage(e.message);
+        });
+
+    // =============================
+    // 4️⃣ ENVIAR MENSAGEM (USER ATUAL)
+    // =============================
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const content = input.value.trim();
+        if (!content) return;
+
+        const response = await fetch(form.action, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document
                     .querySelector('meta[name="csrf-token"]').content,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                conversation_id: conversationId
-            })
+            body: JSON.stringify({ content })
         });
 
-        typingTimer = setTimeout(() => {
-            // apenas debounce
-        }, 1500);
+        const message = await response.json();
+
+        // 👈 IMPORTANTE:
+        // O sender NÃO recebe o broadcast (toOthers)
+        // então adicionamos manualmente
+        appendMessage(message);
+
+        input.value = '';
     });
+
+});
 </script>
 @endpush
