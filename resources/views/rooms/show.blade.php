@@ -167,21 +167,12 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-
-    // =============================
-    // 1️⃣ VARIÁVEIS GLOBAIS DA SALA
-    // =============================
     const roomId = {{ $room->id }};
-    const currentUserId = {{ auth()->id() }};
-    const currentUserName = @json(auth()->user()->name);
 
     const messages = document.getElementById('messages');
     const form = document.getElementById('message-form');
     const input = document.getElementById('message-input');
 
-    // =============================
-    // 2️⃣ FUNÇÃO ÚNICA PARA ADICIONAR MENSAGENS AO DOM
-    // =============================
     function appendMessage(message) {
         const wrapper = document.createElement('div');
 
@@ -204,18 +195,13 @@ document.addEventListener('DOMContentLoaded', () => {
         messages.scrollTop = messages.scrollHeight;
     }
 
-    // =============================
-    // 3️⃣ RECEBER MENSAGENS EM REALTIME (OUTROS USERS)
-    // =============================
-    window.Echo
-        .private(`room.${roomId}`)
+    // 👂 OUVIR EVENTOS EM TEMPO REAL (OUTROS USERS)
+    window.Echo.private(`room.${roomId}`)
         .listen('.room.message.sent', (e) => {
             appendMessage(e.message);
         });
 
-    // =============================
-    // 4️⃣ ENVIAR MENSAGEM (USER ATUAL)
-    // =============================
+    // 📤 ENVIAR MENSAGEM
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -234,14 +220,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const message = await response.json();
 
-        // 👈 IMPORTANTE:
-        // O sender NÃO recebe o broadcast (toOthers)
-        // então adicionamos manualmente
+        // 👁️ Mostrar imediatamente para quem enviou
         appendMessage(message);
 
         input.value = '';
     });
-
 });
 </script>
+
 @endpush

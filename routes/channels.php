@@ -9,10 +9,8 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('room.{roomId}', function ($user, $roomId) {
-    return Room::where('id', $roomId)
-        ->whereHas('users', function ($q) use ($user) {
-            $q->where('users.id', $user->id);
-        })
+    return \App\Models\Room::where('id', $roomId)
+        ->whereHas('users', fn ($q) => $q->where('users.id', $user->id))
         ->exists();
 });
 
