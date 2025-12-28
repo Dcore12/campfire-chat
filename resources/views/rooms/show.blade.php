@@ -197,6 +197,7 @@
             {{-- MESSAGE INPUT --}}
             <input
                 id="message-input"
+                name="content"
                 type="text"
                 placeholder="Escrever mensagem…"
                 class="flex-1 border rounded-full px-4 py-2 text-sm"
@@ -222,6 +223,8 @@
 
             {{-- ATTACH --}}
             <button type="button" class="text-gray-400 cursor-default">📎</button>
+
+            <button type="submit" class="hidden"></button>
         </div>
     </form>
 </div>
@@ -232,13 +235,20 @@
 document.addEventListener('DOMContentLoaded', () => {
     let lastRenderedUserId = null;
     let lastRenderedAt = null;
+    let currentSearchTerm = '';
+    let isSearchMode = false;
 
     const roomId = {{ $room->id }};
     const currentUserId = {{ auth()->id() }};
     const currentUserName = @json(auth()->user()->name);
+
     const messages = document.getElementById('messages');
     const form = document.getElementById('message-form');
-    const input = document.getElementById('message-input');
+    const messageInput = document.getElementById('message-input');
+
+    const searchInput = document.getElementById('search-input');
+    const openSearch = document.getElementById('open-search');
+    const closeSearch = document.getElementById('close-search');
 
     window.listenRoomTyping(roomId, currentUserId);
 
@@ -246,6 +256,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.abs((a - b) / 1000 / 60);
     }
 
+
+    function highlight(text, term) {
+        if (!term) return text;
+
+        const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escaped})`, 'gi');
+
+        return text.replace(
+            regex,
+            '<mark class="bg-yellow-200 text-gray-900 px-1 rounded">$1</mark>'
+        );
+    }
 
     function appendMessage(message) {
         const messageTime = new Date(message.created_at);
@@ -285,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 <div class="text-sm text-gray-800">
-                    ${message.content}
+                    ${highlight(message.content, currentSearchTerm)}
                 </div>
             </div>
         `;
@@ -308,7 +330,11 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const content = input.value.trim();
+        if (isSearchMode) {
+            return; // 🔒 Campfire-style: não envia durante pesquisa
+        }
+
+        const content = messageInput.value.trim();
         if (!content) return;
 
         const response = await fetch(form.action, {
@@ -323,15 +349,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const message = await response.json();
 
-        // 👁️ Mostrar imediatamente para quem enviou
         appendMessage(message);
-
-        input.value = '';
+        messageInput.value = '';
     });
+
     
     let lastTyped = 0;
 
-    input.addEventListener("input", () => {
+    messageInput.addEventListener("input", () => {
+        if (isSearchMode) return; // 🔒 não envia typing enquanto pesquisa
+
         const now = Date.now();
         if (now - lastTyped < 600) return;
         lastTyped = now;
@@ -342,15 +369,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const searchInput = document.getElementById('search-input');
-    const messageInput = document.getElementById('message-input');
-    const openSearch = document.getElementById('open-search');
-    const closeSearch = document.getElementById('close-search');
-
     let originalMessagesHTML = messages.innerHTML;
 
     // 🔍 abrir pesquisa
     openSearch.addEventListener('click', () => {
+        isSearchMode = true;
+
         originalMessagesHTML = messages.innerHTML;
 
         messageInput.classList.add('hidden');
@@ -360,19 +384,26 @@ document.addEventListener('DOMContentLoaded', () => {
         searchInput.focus();
     });
 
+
     // ❌ fechar pesquisa
     closeSearch.addEventListener('click', () => {
+        isSearchMode = false;
+        currentSearchTerm = '';
+
         searchInput.value = '';
         searchInput.classList.add('hidden');
         closeSearch.classList.add('hidden');
         messageInput.classList.remove('hidden');
 
         messages.innerHTML = originalMessagesHTML;
+        messageInput.focus();
     });
+
 
     // ⌨️ pesquisar em tempo real
     searchInput.addEventListener('input', async () => {
         const q = searchInput.value.trim();
+        currentSearchTerm = q;
 
         if (!q) {
             messages.innerHTML = originalMessagesHTML;
