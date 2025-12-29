@@ -1,4 +1,10 @@
 @extends('chat.layout')
+<style>
+    mark.active-result {
+        background-color: #facc15; /* amarelo mais forte */
+        outline: 2px solid #f59e0b;
+    }
+</style>
 
 @section('content')
 <div class="flex flex-col h-full">
@@ -12,6 +18,13 @@
             <p class="text-xs text-gray-500">
                 {{ $room->users->count() }} membros
             </p>
+        </div>
+        {{-- Contador pesquisa --}}
+        <div
+            id="search-counter"
+            class="text-xs text-gray-500 px-6 py-1 hidden"
+        >
+            0 resultados
         </div>
 
         {{-- AÇÕES ADMIN --}}
@@ -108,7 +121,7 @@
         </ul>
     </div>
 
-
+    
 
     {{-- MENSAGENS --}}
     <div id="messages"
@@ -237,6 +250,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastRenderedAt = null;
     let currentSearchTerm = '';
     let isSearchMode = false;
+    let searchResults = [];
+    let currentResultIndex = -1;
+
 
     const roomId = {{ $room->id }};
     const currentUserId = {{ auth()->id() }};
@@ -249,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-input');
     const openSearch = document.getElementById('open-search');
     const closeSearch = document.getElementById('close-search');
+    const searchCounter = document.getElementById('search-counter');
 
     window.listenRoomTyping(roomId, currentUserId);
 
@@ -395,6 +412,11 @@ document.addEventListener('DOMContentLoaded', () => {
         closeSearch.classList.add('hidden');
         messageInput.classList.remove('hidden');
 
+        searchResults = [];
+        currentResultIndex = -1;
+        searchCounter.classList.add('hidden');
+
+
         messages.innerHTML = originalMessagesHTML;
         messageInput.focus();
     });
@@ -407,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!q) {
             messages.innerHTML = originalMessagesHTML;
+            searchCounter.classList.add('hidden');
             return;
         }
 
@@ -418,14 +441,69 @@ document.addEventListener('DOMContentLoaded', () => {
         lastRenderedAt = null;
 
         results.forEach(appendMessage);
+
+        // ⏳ esperar DOM render
+        requestAnimationFrame(() => {
+            searchResults = Array.from(messages.querySelectorAll('mark'));
+            currentResultIndex = searchResults.length ? 0 : -1;
+
+            updateActiveResult();
+            updateCounter();
+        });
     });
+
+    function updateActiveResult() {
+        searchResults.forEach(el => el.classList.remove('active-result'));
+
+        if (currentResultIndex < 0 || !searchResults[currentResultIndex]) return;
+
+        const el = searchResults[currentResultIndex];
+        el.classList.add('active-result');
+
+        el.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+    }
+
+    function updateCounter() {
+        if (!searchResults.length) {
+            searchCounter.textContent = '0 resultados';
+        } else if (searchResults.length === 1) {
+            searchCounter.textContent = '1 resultado';
+        } else {
+            searchCounter.textContent =
+                `${currentResultIndex + 1} de ${searchResults.length} resultados`;
+        }
+
+        searchCounter.classList.remove('hidden');
+    }
+
+
 
     // ESC fecha pesquisa (Campfire feel 😄)
     searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeSearch.click();
+        if (e.key !== 'Enter') return;
+
+        e.preventDefault();
+
+        if (!searchResults.length) return;
+
+        if (e.shiftKey) {
+            // ⬆ anterior
+            currentResultIndex =
+                (currentResultIndex - 1 + searchResults.length) %
+                searchResults.length;
+        } else {
+            // ⬇ próximo
+            currentResultIndex =
+                (currentResultIndex + 1) % searchResults.length;
         }
+
+        updateActiveResult();
+        updateCounter();
     });
+
 
 });
 </script>
