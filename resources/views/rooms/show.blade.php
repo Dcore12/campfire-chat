@@ -69,7 +69,7 @@
                             </select>
 
 
-                            <button class="mt-2 w-full text-xs bg-black text-black py-1 rounded">
+                            <button class="mt-2 w-full text-xs bg-black text-white py-1 rounded">
                                 Adicionar membro
                             </button>
                         </form>

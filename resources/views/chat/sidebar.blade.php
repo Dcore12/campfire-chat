@@ -29,6 +29,14 @@
                     # {{ $room->name }}
                 </a>
             @endforeach
+            <div class="mt-6">
+                <a href="{{ route('rooms.index') }}"
+                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium
+                        text-gray-700 bg-white border border-gray-300 rounded-lg
+                        hover:bg-gray-100 transition">
+                    ← Voltar
+                </a>
+            </div>
         </div>
     </div>
 
