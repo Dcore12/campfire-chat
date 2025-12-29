@@ -6,6 +6,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\DirectMessageController;
 use App\Events\UserTyping;
 use Illuminate\Http\Request;
+use App\Http\Controllers\ProfileController;
 
 
 Route::get('/', function () {
@@ -42,7 +43,13 @@ Route::middleware(['auth'])->group(function () {
         ->name('rooms.destroy');
 
     Route::get('/rooms/{room}/search', [RoomController::class, 'search'])
-    ->name('rooms.search');
+        ->name('rooms.search');
+
+    Route::post('/rooms/{room}/avatar', [RoomController::class, 'updateAvatar'])
+        ->name('rooms.avatar.update');
+
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])
+        ->name('profile.avatar.update');
 });
 
 Route::post('/rooms/{room}/messages', [MessageController::class, 'store'])

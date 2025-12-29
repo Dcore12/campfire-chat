@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class RoomController extends Controller
 {
@@ -146,5 +147,35 @@ class RoomController extends Controller
             });
 
         return response()->json($messages);
+    }
+
+    public function updateAvatar(Request $request, Room $room)
+    {
+        // Apenas admin ou criador
+        abort_unless($room->isAdmin(auth()->user()), 403);
+
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ]);
+
+        // Apagar avatar antigo (se existir)
+        if ($room->avatar) {
+            Storage::disk('public')->delete('room-avatars/' . $room->avatar);
+        }
+
+        // Guardar novo avatar
+        $filename = uniqid('room_') . '.' . $request->avatar->extension();
+
+        $request->avatar->storeAs(
+            'room-avatars',
+            $filename,
+            'public'
+        );
+
+        $room->update([
+            'avatar' => $filename,
+        ]);
+
+        return back()->with('success', 'Avatar da sala atualizado.');
     }
 }

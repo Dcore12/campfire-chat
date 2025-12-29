@@ -26,6 +26,29 @@
                 {{ $room->users->count() }} membros
             </p>
         </div>
+
+        @can('manage', $room)
+        <form
+            action="{{ route('rooms.avatar.update', $room) }}"
+            method="POST"
+            enctype="multipart/form-data"
+            class="flex items-center gap-2"
+        >
+            @csrf
+
+            <label class="cursor-pointer text-sm text-blue-600 hover:underline">
+                Alterar avatar
+                <input
+                    type="file"
+                    name="avatar"
+                    accept="image/*"
+                    class="hidden"
+                    onchange="this.form.submit()"
+                >
+            </label>
+        </form>
+        @endcan
+
         {{-- Contador pesquisa --}}
         <div
             id="search-counter"
