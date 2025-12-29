@@ -21,7 +21,7 @@
                 @error('avatar') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
             </div>
 
-            <button class="px-4 py-2 rounded bg-black text-black">
+            <button class="px-4 py-2 rounded bg-black text-white">
                 Criar
             </button>
         </form>
