@@ -53,10 +53,16 @@ class RoomController extends Controller
             403
         );
 
+        $room->load([
+            'messages.user',
+            'users'
+        ]);
+
         $users = User::where('id', '!=', auth()->id())->get();
 
         return view('rooms.show', compact('room', 'users'));
     }
+
 
     public function invite(Request $request, Room $room)
     {

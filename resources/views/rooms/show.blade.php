@@ -135,55 +135,17 @@
         Novas mensagens
     </div>
 
+    <div
+        id="sticky-day-header"
+        class="sticky top-0 z-10 text-center text-xs text-gray-500 bg-white py-1 hidden"
+    >
+        Hoje
+    </div>
+
 
     {{-- MENSAGENS --}}
     <div id="messages"
         class="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-white">
-
-        @php $lastUserId = null; @endphp
-
-        @forelse($room->messages->reverse() as $message)
-            @php
-                $isNewGroup = $lastUserId !== $message->user_id;
-                $lastUserId = $message->user_id;
-            @endphp
-
-            <div class="flex items-start gap-3">
-                {{-- Avatar --}}
-                <div class="w-8">
-                    @if($isNewGroup)
-                        <img
-                            src="{{ $message->user->avatar_url }}"
-                            alt="{{ $message->user->name }}"
-                            class="w-8 h-8 rounded-full object-cover mt-1"
-                        />
-                    @endif
-                </div>
-
-                {{-- Conteúdo --}}
-                <div class="flex-1">
-                    @if($isNewGroup)
-                        <div class="text-sm">
-                            <span class="font-semibold">
-                                {{ $message->user->name }}
-                            </span>
-                            <span class="text-xs text-gray-400 ml-2">
-                                {{ $message->created_at->format('H:i') }}
-                            </span>
-                        </div>
-                    @endif
-
-                    <div class="text-sm text-gray-800">
-                        {{ $message->content }}
-                    </div>
-                </div>
-            </div>
-        @empty
-            <p class="text-sm text-gray-400">
-                Ainda não há mensagens nesta sala.
-            </p>
-        @endforelse
-
     </div>
 
     {{-- INDICADOR "A ESCREVER" --}}
@@ -277,6 +239,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const openSearch = document.getElementById('open-search');
     const closeSearch = document.getElementById('close-search');
     const searchCounter = document.getElementById('search-counter');
+    const stickyHeader = document.getElementById('sticky-day-header');
+
+    const initialMessages = Object.values(
+        @json($room->messages->reverse())
+    );
+    initialMessages.forEach(appendMessage);
+    messages.scrollTop = messages.scrollHeight;
+
+    messages.scrollTop = messages.scrollHeight;
+
+
 
     messages.addEventListener('scroll', () => {
         const threshold = 40; // tolerância px
@@ -288,8 +261,37 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isAtBottom) {
             hideNewMessagesBadge();
             unreadCount = 0;
+            stickyHeader.classList.add('hidden');
+        } else {
+            updateStickyDayHeader();
         }
     });
+
+    function updateStickyDayHeader() {
+        const separators = Array.from(
+            messages.querySelectorAll('.day-separator')
+        );
+
+        if (!separators.length) return;
+
+        let current = null;
+
+        separators.forEach(sep => {
+            const rect = sep.getBoundingClientRect();
+            const containerRect = messages.getBoundingClientRect();
+
+            if (rect.top <= containerRect.top + 10) {
+                current = sep.dataset.date;
+            }
+        });
+
+        if (current) {
+            stickyHeader.textContent = current;
+            stickyHeader.classList.remove('hidden');
+        } else {
+            stickyHeader.classList.add('hidden');
+        }
+    }
 
 
     const roomId = {{ $room->id }};
@@ -347,9 +349,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return d1 !== d2;
     }
 
-    function appendDaySeparator(label) {
+    function appendDaySeparator(label, date) {
         const sep = document.createElement('div');
         sep.className = 'day-separator text-center';
+        sep.dataset.date = label;
         sep.textContent = label;
         messages.appendChild(sep);
     }
@@ -359,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageTime = new Date(message.created_at);
         // 📅 Separador de dia
         if (isNewDay(messageTime)) {
-            appendDaySeparator(formatDayLabel(messageTime));
+            appendDaySeparator(formatDayLabel(messageTime), messageTime);
             lastRenderedDate = messageTime;
         }
         const isNewGroup =
@@ -465,8 +468,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    let originalMessagesHTML = messages.innerHTML;
-
     // 🔍 abrir pesquisa
     openSearch.addEventListener('click', () => {
         isSearchMode = true;
@@ -474,9 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
         isAtBottom = true;
         hideNewMessagesBadge();
         unreadCount = 0;
-
-
-        originalMessagesHTML = messages.innerHTML;
 
         messageInput.classList.add('hidden');
         searchInput.classList.remove('hidden');
@@ -489,10 +487,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ❌ fechar pesquisa
     closeSearch.addEventListener('click', () => {
         isSearchMode = false;
-        isAtBottom = true;
-        hideNewMessagesBadge();
-        unreadCount = 0;
-
         currentSearchTerm = '';
 
         searchInput.value = '';
@@ -504,15 +498,18 @@ document.addEventListener('DOMContentLoaded', () => {
         currentResultIndex = -1;
         searchCounter.classList.add('hidden');
 
-
-        messages.innerHTML = originalMessagesHTML;
+        // 🔄 reset completo
+        messages.innerHTML = '';
         lastRenderedUserId = null;
         lastRenderedAt = null;
         lastRenderedDate = null;
+
+        initialMessages.forEach(appendMessage);
         messages.scrollTop = messages.scrollHeight;
 
         messageInput.focus();
     });
+
 
 
     // ⌨️ pesquisar em tempo real
@@ -521,10 +518,18 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSearchTerm = q;
 
         if (!q) {
-            messages.innerHTML = originalMessagesHTML;
+            messages.innerHTML = '';
+            lastRenderedUserId = null;
+            lastRenderedAt = null;
+            lastRenderedDate = null;
+
+            initialMessages.forEach(appendMessage);
+            messages.scrollTop = messages.scrollHeight;
+
             searchCounter.classList.add('hidden');
             return;
         }
+
 
         const res = await fetch(`/rooms/${roomId}/search?q=${encodeURIComponent(q)}`);
         const results = await res.json();
@@ -622,7 +627,10 @@ document.addEventListener('DOMContentLoaded', () => {
         hideNewMessagesBadge();
         unreadCount = 0;
     });
-
+    
+    requestAnimationFrame(() => {
+        updateStickyDayHeader();
+    });
 
 });
 </script>
